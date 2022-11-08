@@ -138,18 +138,18 @@ export async function downloadAvatarForUser(user?: User | null) {
     return;
   }
 
-  const { profile } = user;
+  const img = user.profile?.image_512! || user.icons?.image_72!;
 
-  if (!profile || !profile.image_512) {
+  if (!img) {
     return;
   }
 
   try {
     const filePath = getAvatarFilePath(
       user.id!,
-      path.extname(profile.image_512)
+      path.extname(img)
     );
-    downloadURL(profile.image_512, filePath, false);
+    downloadURL(img, filePath, false);
   } catch (error) {
     console.warn(`Failed to download avatar for user ${user.id!}`, error);
   }

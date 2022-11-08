@@ -113,9 +113,9 @@ const Avatar: React.FunctionComponent<AvatarProps> = ({ userId }) => {
   if (!userId) return null;
 
   const user = users[userId];
-  if (!user || !user.profile || !user.profile.image_512) return null;
+  if (!user) return null;
 
-  const ext = path.extname(user?.profile?.image_512!);
+  const ext = path.extname(user?.profile?.image_512! || user?.icons?.image_72!);
   const src = `${base}avatars/${userId}${ext}`;
 
   return <img className="avatar" src={src} />;
@@ -145,9 +145,10 @@ interface MessageProps {
 }
 const Message: React.FunctionComponent<MessageProps> = (props) => {
   const { message } = props;
-  const username = message.user
-    ? users[message.user]?.name
-    : message.user || "Unknown";
+  const identifier = message.user || message.bot_id;
+  const username = identifier
+    ? users[identifier]?.profile?.display_name || users[identifier]?.real_name || users[identifier]?.name
+    : identifier || "Unknown";
   const slackCallbacks = {
     user: ({ id }: { id: string }) => `@${users[id]?.name || id}`,
   };
@@ -155,7 +156,7 @@ const Message: React.FunctionComponent<MessageProps> = (props) => {
   return (
     <div className="message-gutter" id={message.ts}>
       <div className="" data-stringify-ignore="true">
-        <Avatar userId={message.user} />
+        <Avatar userId={identifier} />
       </div>
       <div className="">
         <span className="sender">{username}</span>
@@ -310,7 +311,7 @@ const IndexPage: React.FunctionComponent<IndexPageProps> = (props) => {
             const urlSearchParams = new URLSearchParams(window.location.search);
             const channelValue = urlSearchParams.get("c");
             const tsValue = urlSearchParams.get("ts");
-            
+
             if (channelValue) {
               const iframe = document.getElementsByName('iframe')[0]
               iframe.src = "html/" + decodeURIComponent(channelValue) + '.html' + '#' + (tsValue || '');

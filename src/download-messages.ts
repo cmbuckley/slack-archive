@@ -31,21 +31,27 @@ function isChannels(input: any): input is ConversationsListResponse {
 
 async function downloadUser(
   item: Message | any,
-  users: Users
+  users: Users,
+  spinner?: ora.Ora
 ): Promise<User | null> {
-  if (!item.user) return null;
-  if (users[item.user]) return users[item.user];
+  const identifier = item.user || item.bot_id,
+    identifierType = (item.user ? 'user' : 'bot');
 
-  console.log(`Downloading info for user ${item.user}...`);
+  if (!identifier) return null;
+  if (users[identifier]) return users[identifier];
+
+  const log = `Downloading info for user ${identifier}...`;
+  spinner ? spinner.text = log : console.log(log);
 
   const user = (
-    await getWebClient().users.info({
-      user: item.user,
+    // call either the users.info or bots.info API
+    await getWebClient().apiCall(`${identifierType}s.info`, {
+      [identifierType]: identifier,
     })
-  ).user;
+  )[identifierType];
 
   if (user) {
-    return (users[item.user] = user);
+    return (users[identifier] = user);
   }
 
   return null;
@@ -199,10 +205,11 @@ export async function downloadExtras(
       message.replies = await downloadReplies(channel, message);
     }
 
-    if (message.user && users[message.user] === undefined) {
-      const usr = await downloadUser(message, users);
+    const identifier = message.user || message.bot_id;
+    if (identifier && users[identifier] === undefined) {
+      const usr = await downloadUser(message, users, spinner);
       if (usr) {
-        users[message.user] = usr;
+        users[identifier] = usr;
       }
     }
   }
