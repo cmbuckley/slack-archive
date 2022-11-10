@@ -1,13 +1,19 @@
 import { uniqBy } from "lodash-es";
 import inquirer from "inquirer";
 import fs from "fs-extra";
-import { User } from "@slack/web-api/dist/response/UsersInfoResponse";
 import { Channel } from "@slack/web-api/dist/response/ConversationsListResponse";
 import ora from "ora";
 
 import {
+  User,
+  Users,
+  Bot,
+  Bots,
+} from "./interfaces.js";
+import {
   CHANNELS_DATA_PATH,
   USERS_DATA_PATH,
+  BOTS_DATA_PATH,
   getChannelDataFilePath,
   OUT_DIR,
   config,
@@ -27,7 +33,7 @@ import { createBackup, deleteBackup, deleteOlderBackups } from "./backup.js";
 import { isValid, parseISO } from "date-fns";
 import { createSearch } from "./search.js";
 import { write, writeAndMerge } from "./data-write.js";
-import { messagesCache, getUsers } from "./data-load.js";
+import { messagesCache, getUsers, getBots } from "./data-load.js";
 import { getSlackArchiveData, setSlackArchiveData } from "./archive-data.js";
 
 const { prompt } = inquirer;
@@ -206,7 +212,8 @@ export async function main() {
   await createBackup();
 
   const slackArchiveData = await getSlackArchiveData();
-  const users: Record<string, User> = await getUsers();
+  const users: Users = await getUsers();
+  const bots: Bots = await getBots();
   const channelTypes = (await selectChannelTypes()).join(",");
 
   console.log(`Testing auth...`);
@@ -242,7 +249,7 @@ export async function main() {
     );
     let result = downloadData.messages;
     newMessages[channel.id] = downloadData.new;
-    await downloadExtras(channel, result, users);
+    await downloadExtras(channel, result, users, bots);
 
     await downloadAvatars();
 

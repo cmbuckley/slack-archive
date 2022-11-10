@@ -6,7 +6,7 @@ import {
 } from "@slack/web-api";
 import { Channel } from "@slack/web-api/dist/response/ConversationsListResponse";
 import { User } from "@slack/web-api/dist/response/UsersInfoResponse";
-import ora from "ora";
+import ora, { Ora } from "ora";
 
 import { config } from "./config.js";
 import { ArchiveMessage, Message, Users } from "./interfaces.js";
@@ -32,7 +32,8 @@ function isChannels(input: any): input is ConversationsListResponse {
 async function downloadUser(
   item: Message | any,
   users: Users,
-  spinner?: ora.Ora
+  bots: Bots,
+  spinner?: Ora
 ): Promise<User | null> {
   const identifier = item.user || item.bot_id,
     identifierType = (item.user ? 'user' : 'bot');
@@ -59,7 +60,8 @@ async function downloadUser(
 
 export async function downloadChannels(
   options: ConversationsListArguments,
-  users: Users
+  users: Users,
+  bots: Bots
 ): Promise<Array<Channel>> {
   const channels = [];
 
@@ -78,7 +80,7 @@ export async function downloadChannels(
 
       for (const channel of pageChannels) {
         if (channel.is_im) {
-          const user = await downloadUser(channel, users);
+          const user = await downloadUser(channel, users, bots);
           const realUserName = user?.real_name ? ` (${user?.real_name})` : "";
           channel.name = channel.name || `${user?.name}${realUserName}`;
         }

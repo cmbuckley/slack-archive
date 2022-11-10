@@ -1,12 +1,15 @@
 import { Message as SlackMessage } from "@slack/web-api/dist/response/ConversationsHistoryResponse";
 import { Channel as SlackChannel } from "@slack/web-api/dist/response/ConversationsListResponse";
 import { User as SlackUser } from "@slack/web-api/dist/response/UsersInfoResponse";
+import { Bot as SlackBot } from "@slack/web-api/dist/response/BotsInfoResponse";
 import { File as SlackFile } from "@slack/web-api/dist/response/FilesInfoResponse";
 import { AuthTestResponse } from "@slack/web-api";
 
 export type User = SlackUser;
+export type Bot = SlackBot;
 
 export type Users = Record<string, User>;
+export type Bots = Record<string, Bot>;
 
 export interface ArchiveMessage extends SlackMessage {
   replies?: Array<SlackMessage>;

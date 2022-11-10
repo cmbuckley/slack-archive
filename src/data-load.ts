@@ -6,12 +6,14 @@ import {
   SearchFile,
   SlackArchiveData,
   Users,
+  Bots,
 } from "./interfaces.js";
 import {
   CHANNELS_DATA_PATH,
   getChannelDataFilePath,
   SEARCH_DATA_PATH,
   USERS_DATA_PATH,
+  BOTS_DATA_PATH,
 } from "./config.js";
 import { retry } from "./retry.js";
 
@@ -43,6 +45,10 @@ export async function getMessages(
 
 export async function getUsers(): Promise<Users> {
   return getFile<Users>(USERS_DATA_PATH, {});
+}
+
+export async function getBots(): Promise<Bots> {
+  return getFile<Bots>(BOTS_DATA_PATH, {});
 }
 
 export async function getChannels(): Promise<Array<Channel>> {
