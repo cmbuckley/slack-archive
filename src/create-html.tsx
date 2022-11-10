@@ -152,6 +152,7 @@ const Message: React.FunctionComponent<MessageProps> = (props) => {
     : identifier || "Unknown";
   const slackCallbacks = {
     user: ({ id }: { id: string }) => `@${users[id]?.name || id}`,
+    channel: ({ id, name }: { id: string, name: string }) => `<a href="${id}-0.html">#${name}</a>`,
   };
 
   return (
