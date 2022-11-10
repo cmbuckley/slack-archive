@@ -49,8 +49,9 @@ interface TimestampProps {
 const Timestamp: React.FunctionComponent<TimestampProps> = (props) => {
   const jsTs = slackTimestampToJavaScriptTimestamp(props.message.ts);
   const ts = format(jsTs, "PPPPpppp");
+  const prettyTs = format(jsTs, "PPp");
 
-  return <span className="c-timestamp__label">{ts}</span>;
+  return <span className="c-timestamp__label" title={ts}>{prettyTs}</span>;
 };
 
 interface FilesProps {
