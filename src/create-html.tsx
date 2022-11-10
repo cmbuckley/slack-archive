@@ -150,7 +150,8 @@ const Message: React.FunctionComponent<MessageProps> = (props) => {
     ? users[message.user]?.name
     : message.user || "Unknown";
   const slackCallbacks = {
-    user: ({ id }: { id: string }) => `@${users[id]?.name || id}`,
+    user: ({ id }: { id: string }) => `<a href="${id}-0.html">@${users[id]?.display_name || users[id]?.name || id}</a>`,
+    channel: ({ id, name }: { id: string, name: string }) => `<a href="${id}-0.html">#${name}</a>`,
   };
 
   return (
@@ -311,7 +312,7 @@ const IndexPage: React.FunctionComponent<IndexPageProps> = (props) => {
             const urlSearchParams = new URLSearchParams(window.location.search);
             const channelValue = urlSearchParams.get("c");
             const tsValue = urlSearchParams.get("ts");
-            
+
             if (channelValue) {
               const iframe = document.getElementsByName('iframe')[0]
               iframe.src = "html/" + decodeURIComponent(channelValue) + '.html' + '#' + (tsValue || '');
