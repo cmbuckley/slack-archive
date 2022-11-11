@@ -43,13 +43,26 @@ let me: User | null;
 // Little hack to switch between ./index.html and ./html/...
 let base = "";
 
+function slackHTML(text) {
+  return {
+    __html: slackMarkdown.toHTML(text, {
+      escapeHTML: false,
+      slackCallbacks: {
+        user: ({ id }: { id: string }) => `<a href="${id}-0.html">@${users[id]?.display_name || users[id]?.name || id}</a>`,
+        channel: ({ id, name }: { id: string, name: string }) => `<a href="${id}-0.html">#${name}</a>`,
+      },
+    }).replace(/<([^>]+…)$/, '&lt;$1'), // text can truncate in the middle of a link, and look like an opening HTML tag
+  };
+}
+
 interface TimestampProps {
-  message: Message;
+  ts: string;
+  format: string;
 }
 const Timestamp: React.FunctionComponent<TimestampProps> = (props) => {
-  const jsTs = slackTimestampToJavaScriptTimestamp(props.message.ts);
+  const jsTs = slackTimestampToJavaScriptTimestamp(props.ts);
   const ts = format(jsTs, "PPPPpppp");
-  const prettyTs = format(jsTs, "PPp");
+  const prettyTs = format(jsTs, props.format || "PPp");
 
   return <span className="c-timestamp__label" title={ts}>{prettyTs}</span>;
 };
@@ -149,36 +162,90 @@ const Message: React.FunctionComponent<MessageProps> = (props) => {
   const username = message.user
     ? users[message.user]?.name
     : message.user || "Unknown";
-  const slackCallbacks = {
-    user: ({ id }: { id: string }) => `<a href="${id}-0.html">@${users[id]?.display_name || users[id]?.name || id}</a>`,
-    channel: ({ id, name }: { id: string, name: string }) => `<a href="${id}-0.html">#${name}</a>`,
-  };
 
   return (
     <div className="message-gutter" id={message.ts}>
       <div className="" data-stringify-ignore="true">
         <Avatar userId={message.user} />
       </div>
-      <div className="">
+      <div className="message-body">
         <span className="sender">{username}</span>
         <span className="timestamp">
-          <Timestamp message={message} />
+          <Timestamp ts={message.ts} />
         </span>
         <br />
-        <div
+        {!message.attachments && <div
           className="text"
-          dangerouslySetInnerHTML={{
-            __html: slackMarkdown.toHTML(message.text, {
-              escapeHTML: false,
-              slackCallbacks,
-            }),
-          }}
-        />
+          dangerouslySetInnerHTML={slackHTML(message.text)}
+        />}
+        {(message.attachments || []).map((attachment, index) => {
+          return <MessageAttachment key={index} attachment={attachment} />
+        })}
         {props.children}
       </div>
     </div>
   );
 };
+
+interface MessageAttachmentProps {
+  attachment: any;
+}
+const MessageAttachment: React.FunctionComponent<MessageAttachmentProps> = (props) => {
+  const { attachment } = props;
+
+  return (
+    <div className="message-attachment">
+      {attachment.pretext && <div
+        className="message-attachment__pretext"
+        dangerouslySetInnerHTML={slackHTML(attachment.pretext)}
+      />}
+      <div
+        className="message-attachment__body"
+        style={{borderLeftColor: attachment.color ? '#' + attachment.color.replace(/^#/, '') : null}}
+      >
+        {attachment.service_name && <div
+          className="message-attachment__service"
+        >
+          {attachment.service_icon && <img src={attachment.service_icon} />}
+          <span dangerouslySetInnerHTML={slackHTML(attachment.service_name)} />
+        </div>}
+        {/* @todo title_link */}
+        {attachment.title && <div
+          className="message-attachment__title"
+          dangerouslySetInnerHTML={slackHTML(attachment.title)}
+        />}
+        {(attachment.blocks || []).map((block, index) => {
+          return <MessageBlock key={index} block={block} />
+        })}
+        {attachment.text && <div
+          className="message-attachment__row"
+          dangerouslySetInnerHTML={slackHTML(attachment.text)}
+        />}
+        {attachment.image_url && <img
+          className="message-attachment__image"
+          src={attachment.image_url}
+          width={attachment.image_width}
+          height={attachment.image_height}
+        />}
+        {(attachment.fields || []).map((field, index) => {
+          return (
+            <div key={index}>
+              <div className="message-attachment__field-title">{field.title}</div>
+              <div className="message-attachment__field-value" dangerouslySetInnerHTML={slackHTML(field.value)} />
+            </div>
+          );
+        })}
+        {attachment.footer && <div
+          className="message-attachment__footer"
+        >
+          {attachment.footer_icon && <img src={attachment.footer_icon} />}
+          <span dangerouslySetInnerHTML={slackHTML(attachment.footer)} />
+          {attachment.ts && <Timestamp ts={attachment.ts + '.000'} format=" | d MMM" />}
+        </div>}
+      </div>
+    </div>
+  );
+}
 
 interface MessagesPageProps {
   messages: Array<ArchiveMessage>;
