@@ -64,7 +64,7 @@ select {
   html:focus-within {
    scroll-behavior: auto;
   }
-  
+
   *,
   *::before,
   *::after {
@@ -125,7 +125,7 @@ audio, video {
   background-color: #fafafa;
   border: 2px solid #39113E;
   padding: 10px;
-  border-radius: 5px; 
+  border-radius: 5px;
 }
 
 .message-gutter div:first-of-type {
@@ -295,4 +295,41 @@ audio, video {
 #search a {
   text-decoration: none;
   color: unset;
+}
+
+.message-body code {
+  background-color: rgba(29,28,29,.04);
+  border: 1px solid rgba(29,28,29,.13);
+  border-radius: 3px;
+  padding: 2px 3px 1px;
+  color: rgba(224,30,90,1);
+  font-size: 90%;
+}
+
+.message-attachment__title, .message-attachment__field-title {
+  font-weight: bold;
+}
+
+.message-attachment__body {
+  border-left: 4px solid rgba(221,221,221,1);
+  padding-left: 12px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.message-attachment__footer {
+  padding-top: 4px;
+  font-size: 85%;
+}
+
+.message-attachment__footer, .message-attachment__footer a {
+  color: rgba(97,96,97,1);
+}
+
+.message-attachment__footer img, .message-attachment__service img {
+  height: 16px;
+  width: 16px;
+  display: inline;
+  vertical-align: middle;
+  margin-right: 4px;
 }
