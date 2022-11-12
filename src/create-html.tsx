@@ -48,7 +48,7 @@ function slackHTML(text) {
     __html: slackMarkdown.toHTML(text, {
       escapeHTML: false,
       slackCallbacks: {
-        user: ({ id }: { id: string }) => `@${users[id]?.name || id}`,
+        user: ({ id }: { id: string }) => `<a href="${id}-0.html">@${users[id]?.display_name || users[id]?.name || id}</a>`,
         channel: ({ id, name }: { id: string, name: string }) => `<a href="${id}-0.html">#${name}</a>`,
       },
     }).replace(/<([^>]+…)$/, '&lt;$1'), // fix awkwardly truncated text
