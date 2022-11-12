@@ -163,6 +163,13 @@ const Message: React.FunctionComponent<MessageProps> = (props) => {
   const username = identifier
     ? users[identifier]?.profile?.display_name || users[identifier]?.real_name || users[identifier]?.name
     : identifier || "Unknown";
+  let showText = (!message.attachments && !message.blocks);
+
+  if (message.blocks && message.blocks.length == 1) {
+    if (message.blocks[0].type == "rich_text" && message.blocks[0].elements.length == 1) {
+      showText = true;
+    }
+  }
 
   return (
     <div className="message-gutter" id={message.ts}>
@@ -175,10 +182,13 @@ const Message: React.FunctionComponent<MessageProps> = (props) => {
           <Timestamp ts={message.ts} />
         </span>
         <br />
-        {!message.attachments && <div
+        {showText && <div
           className="text"
           dangerouslySetInnerHTML={slackHTML(message.text)}
         />}
+        {(message.blocks || []).map((block, index) => {
+          return <MessageBlock key={index} block={block} />
+        })}
         {(message.attachments || []).map((attachment, index) => {
           return <MessageAttachment key={index} attachment={attachment} />
         })}
@@ -186,6 +196,54 @@ const Message: React.FunctionComponent<MessageProps> = (props) => {
       </div>
     </div>
   );
+};
+
+interface MessageBlockProps {
+  block: any;
+}
+const MessageBlock: React.FunctionComponent<MessageAttachmentProps> = (props) => {
+   const { block } = props;
+
+   if (block.type == "rich_text" && block.elements.length == 1) return null;
+
+   return (
+    <div className={"message-block--" + block.type}>
+      {block.type == "section" && block.text && <span
+        dangerouslySetInnerHTML={slackHTML(block.text.text)}
+      />}
+      {block.type == "rich_text" && block.elements.map((element, index) => {
+        if (element.type == "rich_text_section") {
+          return <span key={index}>
+            {element.elements.map((subelement, subindex) => {
+              let content = (subelement.type == "emoji" ? `:${subelement.name}:` : subelement.text);
+
+              if (subelement.type == "link") {
+                return <a key={subindex} href={subelement.link}>{subelement.text}</a>;
+              }
+
+              return <span
+                key={subindex}
+                dangerouslySetInnerHTML={slackHTML(content)}
+              />;
+            })}
+          </span>;
+        }
+      })}
+      {block.type == "context" && block.elements.map((element, index) => {
+        if (element.type == "mrkdwn") {
+          return <span key={index} dangerouslySetInnerHTML={slackHTML(element.text)} />;
+        }
+        return <span key={index}>{element.text}</span>;
+      })}
+      {(block.fields || []).map((field, index) => {
+        return <div
+          key={index}
+          className="message-block__field"
+          dangerouslySetInnerHTML={slackHTML(field.text)}
+        />;
+      })}
+    </div>
+   );
 };
 
 interface MessageAttachmentProps {
