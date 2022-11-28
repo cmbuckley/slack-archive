@@ -1,4 +1,11 @@
-import { Message as SlackMessage } from "@slack/web-api/dist/response/ConversationsHistoryResponse";
+import {
+  Message as SlackMessage,
+  Block as SlackBlock,
+  Attachment as SlackAttachment,
+  Accessory as SlackAccessory,
+  AccessoryElement as SlackAccessoryElement,
+  PurpleElement as SlackPurpleElement,
+} from "@slack/web-api/dist/response/ConversationsHistoryResponse";
 import { Channel as SlackChannel } from "@slack/web-api/dist/response/ConversationsListResponse";
 import { User as SlackUser } from "@slack/web-api/dist/response/UsersInfoResponse";
 import { File as SlackFile } from "@slack/web-api/dist/response/FilesInfoResponse";
@@ -13,6 +20,16 @@ export interface ArchiveMessage extends SlackMessage {
 }
 
 export type Message = SlackMessage;
+
+export type Block = SlackBlock;
+
+export type Attachment = SlackAttachment;
+
+export type Accessory = SlackAccessory;
+
+export type AccessoryElement = SlackAccessoryElement;
+
+export type PurpleElement = SlackPurpleElement;
 
 export type Channel = SlackChannel;
 

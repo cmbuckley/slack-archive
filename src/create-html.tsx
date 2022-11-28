@@ -15,6 +15,11 @@ import {
   ArchiveMessage,
   Channel,
   Message,
+  Block,
+  Attachment,
+  Accessory,
+  AccessoryElement,
+  PurpleElement,
   SlackArchiveData,
   User,
   Users,
@@ -29,6 +34,48 @@ import { slackTimestampToJavaScriptTimestamp } from "./timestamp.js";
 import { recordPage } from "./search.js";
 import { write } from "./data-write.js";
 import { getSlackArchiveData } from "./archive-data.js";
+import {
+  Field as SlackAttachmentField,
+  Description as SlackBlockField,
+} from "@slack/web-api/dist/response/ChatPostMessageResponse";
+import {
+  KnownBlock,
+  ImageElement,
+  MrkdwnElement,
+  PlainTextElement,
+} from "@slack/types";
+
+interface RichTextElement {
+  type: string;
+  name?: string;
+  unicode?: string;
+  url?: string;
+  text?: string;
+  user_id?: string;
+  team_id?: string;
+  usergroup_id?: string;
+  timestamp?: string;
+  range?: string;
+  style?: {
+    bold?: boolean;
+    italic?: boolean;
+    strike?: boolean;
+    code?: boolean;
+  }
+}
+
+interface RichTextSection {
+  type: 'rich_text_section';
+  elements: RichTextElement[];
+}
+
+interface RichTextBlock {
+  type: 'rich_text';
+  block_id?: string;
+  elements: RichTextSection[];
+}
+
+type SlackBlock = KnownBlock | RichTextBlock;
 
 const _dirname = dirname(fileURLToPath(import.meta.url));
 const MESSAGE_CHUNK = 1000;
@@ -43,13 +90,18 @@ let me: User | null;
 // Little hack to switch between ./index.html and ./html/...
 let base = "";
 
-function slackHTML(text) {
+interface SlackCallbackData {
+  id: string;
+  name: string;
+}
+
+function slackHTML(text: string | undefined) {
   return {
     __html: slackMarkdown.toHTML(text, {
       escapeHTML: false,
       slackCallbacks: {
-        user: ({ id }: { id: string }) => `<a href="${id}-0.html">@${users[id]?.display_name || users[id]?.name || id}</a>`,
-        channel: ({ id, name }: { id: string, name: string }) => `<a href="${id}-0.html">#${name}</a>`,
+        user: ({ id }: SlackCallbackData) => `<a href="${id}-0.html">@${users[id]?.profile?.display_name || users[id]?.name || id}</a>`,
+        channel: ({ id, name }: SlackCallbackData) => `<a href="${id}-0.html">#${name}</a>`,
       },
     }).replace(/<([^>]+…)$/, '&lt;$1'), // text can truncate in the middle of a link, and look like an opening HTML tag
   };
@@ -57,7 +109,7 @@ function slackHTML(text) {
 
 interface TimestampProps {
   ts: string;
-  format: string;
+  format?: string;
 }
 const Timestamp: React.FunctionComponent<TimestampProps> = (props) => {
   const jsTs = slackTimestampToJavaScriptTimestamp(props.ts);
@@ -165,7 +217,7 @@ const Message: React.FunctionComponent<MessageProps> = (props) => {
   let showText = (!message.attachments && !message.blocks);
 
   if (message.blocks && message.blocks.length == 1) {
-    if (message.blocks[0].type == "rich_text" && message.blocks[0].elements.length == 1) {
+    if (message.blocks[0].type == "rich_text" && message.blocks[0].elements!.length == 1) {
       showText = true;
     }
   }
@@ -178,17 +230,17 @@ const Message: React.FunctionComponent<MessageProps> = (props) => {
       <div className="message-body">
         <span className="sender">{username}</span>
         <span className="timestamp">
-          <Timestamp ts={message.ts} />
+          <Timestamp ts={message.ts || ''} />
         </span>
         <br />
         {showText && <div
           className="text"
           dangerouslySetInnerHTML={slackHTML(message.text)}
         />}
-        {(message.blocks || []).map((block, index) => {
+        {(message.blocks || []).map((block: Block, index: number) => {
           return <MessageBlock key={index} block={block} />
         })}
-        {(message.attachments || []).map((attachment, index) => {
+        {(message.attachments || []).map((attachment: Attachment, index: number) => {
           return <MessageAttachment key={index} attachment={attachment} />
         })}
         {props.children}
@@ -198,26 +250,26 @@ const Message: React.FunctionComponent<MessageProps> = (props) => {
 };
 
 interface MessageBlockProps {
-  block: any;
+  block: Block;
 }
-const MessageBlock: React.FunctionComponent<MessageAttachmentProps> = (props) => {
+const MessageBlock: React.FunctionComponent<MessageBlockProps> = (props) => {
    const { block } = props;
 
-   if (block.type == "rich_text" && block.elements.length == 1) return null;
+   if (block.type == "rich_text" && block.elements!.length == 1) return null;
 
    return (
     <div className={"message-block--" + block.type}>
       {block.type == "section" && block.text && <span
         dangerouslySetInnerHTML={slackHTML(block.text.text)}
       />}
-      {block.type == "rich_text" && block.elements.map((element, index) => {
+      {block.type == "rich_text" && block.elements!.map((element: Accessory, index: number) => {
         if (element.type == "rich_text_section") {
           return <span key={index}>
-            {element.elements.map((subelement, subindex) => {
+            {(element.elements || []).map((subelement: AccessoryElement, subindex: number) => {
               let content = (subelement.type == "emoji" ? `:${subelement.name}:` : subelement.text);
 
               if (subelement.type == "link") {
-                return <a key={subindex} href={subelement.link}>{subelement.text}</a>;
+                return <a key={subindex} href={subelement.url}>{subelement.text}</a>;
               }
 
               return <span
@@ -228,13 +280,24 @@ const MessageBlock: React.FunctionComponent<MessageAttachmentProps> = (props) =>
           </span>;
         }
       })}
-      {block.type == "context" && block.elements.map((element, index) => {
-        if (element.type == "mrkdwn") {
-          return <span key={index} dangerouslySetInnerHTML={slackHTML(element.text)} />;
+      // Argument of type 'Description | undefined' is not assignable to parameter of type 'string | undefined'.
+      //   Type 'Description' is not assignable to type 'string'.
+      {block.type == "context" && (block.elements || []).map((element: Accessory, index: number) => {
+        switch (element.type) {
+          case "mrkdwn":
+            return <span key={index} dangerouslySetInnerHTML={slackHTML(element.text)} />;
+            break;
+
+          case "plain_text":
+            return <span key={index}>{element.text}</span>;
+            break;
+
+          case "image":
+            return <img key={index} src={element.image_url} alt={element.alt_text} />;
+            break;
         }
-        return <span key={index}>{element.text}</span>;
       })}
-      {(block.fields || []).map((field, index) => {
+      {block.type == "section" && (block.fields || []).map((field: SlackBlockField, index: number) => {
         return <div
           key={index}
           className="message-block__field"
@@ -246,7 +309,7 @@ const MessageBlock: React.FunctionComponent<MessageAttachmentProps> = (props) =>
 };
 
 interface MessageAttachmentProps {
-  attachment: any;
+  attachment: Attachment;
 }
 const MessageAttachment: React.FunctionComponent<MessageAttachmentProps> = (props) => {
   const { attachment } = props;
@@ -259,7 +322,7 @@ const MessageAttachment: React.FunctionComponent<MessageAttachmentProps> = (prop
       />}
       <div
         className="message-attachment__body"
-        style={{borderLeftColor: attachment.color ? '#' + attachment.color.replace(/^#/, '') : null}}
+        style={{borderLeftColor: attachment.color ? '#' + attachment.color.replace(/^#/, '') : undefined}}
       >
         {attachment.service_name && <div
           className="message-attachment__service"
@@ -272,7 +335,7 @@ const MessageAttachment: React.FunctionComponent<MessageAttachmentProps> = (prop
           className="message-attachment__title"
           dangerouslySetInnerHTML={slackHTML(attachment.title)}
         />}
-        {(attachment.blocks || []).map((block, index) => {
+        {(attachment.blocks || []).map((block: Block, index: number) => {
           return <MessageBlock key={index} block={block} />
         })}
         {attachment.text && <div
@@ -285,7 +348,7 @@ const MessageAttachment: React.FunctionComponent<MessageAttachmentProps> = (prop
           width={attachment.image_width}
           height={attachment.image_height}
         />}
-        {(attachment.fields || []).map((field, index) => {
+        {(attachment.fields || []).map((field: SlackAttachmentField, index: number) => {
           return (
             <div key={index}>
               <div className="message-attachment__field-title">{field.title}</div>
