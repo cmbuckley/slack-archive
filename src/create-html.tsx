@@ -218,7 +218,7 @@ const MessageBlock: React.FunctionComponent<MessageAttachmentProps> = (props) =>
               let content = (subelement.type == "emoji" ? `:${subelement.name}:` : subelement.text);
 
               if (subelement.type == "link") {
-                return <a key={subindex} href={subelement.link}>{subelement.text}</a>;
+                return <a key={subindex} href={subelement.url} target="_blank">{subelement.text}</a>;
               }
 
               return <span
